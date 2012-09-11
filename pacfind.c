@@ -14,6 +14,20 @@ typedef enum field_t {
     NAME,
     DESC,
     VERSION,
+    DEPENDS,
+    OPTDEPENDS,
+    ORIGIN,
+    REASON,
+    LICENSES,
+    GROUPS,
+    CONFLICTS,
+    PROVIDES,
+    DELTAS,
+    REPLACES,
+    FILES,
+    BACKUP,
+    DB,
+    VALIDATION,
     URL,
     BUILDDATE,
     INSTALLDATE,
@@ -36,6 +50,8 @@ static field_map_t field_map[] = {
     {"name", NAME},
     {"desc", DESC},
     {"version", VERSION},
+    {"depends", DEPENDS},
+    {"optdepends", OPTDEPENDS},
     {"url", URL},
     {"builddate", BUILDDATE},
     {"installdate", INSTALLDATE},
@@ -460,6 +476,7 @@ int pcmp(const void *p1, const void *p2) {
 
 typedef int (*cmp_fn) (const void *, const void *);
 typedef char* (*prop_fn) (const void *);
+typedef alpm_list_t* (*list_fn) (const void *);
 typedef int (*eq_fn) (int);
 
 int regex_cmp(const char *val, regex_t *re) {
@@ -482,15 +499,18 @@ int ge(int i) { return i >= 0; }
 int lt(int i) { return i < 0; }
 int le(int i) { return i <= 0; }
 
+char *alpm_dep_get_name(alpm_depend_t *dep) { return dep->name; }
+
 alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     alpm_list_t *p = pkgs;
     alpm_list_t *ret = NULL;
 
     long tmp;
 
-    prop_fn pfn;;
-    cmp_fn cfn;
-    eq_fn efn;
+    list_fn lfn = NULL;
+    prop_fn pfn = NULL;
+    cmp_fn cfn = (cmp_fn) strcmp;
+    eq_fn efn = NULL;
 
     regex_t reg;
 
@@ -509,23 +529,27 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     switch(field) {
         case FILENAME:
             pfn = (prop_fn) alpm_pkg_get_filename;
-            cfn = (cmp_fn) strcmp;
             break;
         case NAME:
             pfn = (prop_fn) alpm_pkg_get_name;
-            cfn = (cmp_fn) strcmp;
             break;
         case DESC:
             pfn = (prop_fn) alpm_pkg_get_desc;
-            cfn = (cmp_fn) strcmp;
             break;
+        case DEPENDS:
+            lfn = (list_fn) alpm_pkg_get_depends;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        /*case OPTDEPENDS:*/
+            /*lfn = (list_fn) alpm_pkg_get_optdepends;*/
+            /*pfn = (prop_fn) alpm_dep_get_name;*/
+            /*break;*/
         case VERSION:
             pfn = (prop_fn) alpm_pkg_get_version;
             cfn = (cmp_fn) alpm_pkg_vercmp;
             break;
         case URL:
             pfn = (prop_fn) alpm_pkg_get_url;
-            cfn = (cmp_fn) strcmp;
             break;
         case BUILDDATE:
             pfn = (prop_fn) alpm_pkg_get_builddate;
@@ -541,19 +565,15 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             break;
         case PACKAGER:
             pfn = (prop_fn) alpm_pkg_get_packager;
-            cfn = (cmp_fn) strcmp;
             break;
         case MD5SUM:
             pfn = (prop_fn) alpm_pkg_get_md5sum;
-            cfn = (cmp_fn) strcmp;
             break;
         case SHA256SUM:
             pfn = (prop_fn) alpm_pkg_get_sha256sum;
-            cfn = (cmp_fn) strcmp;
             break;
         case ARCH:
             pfn = (prop_fn) alpm_pkg_get_arch;
-            cfn = (cmp_fn) strcmp;
             break;
         case SIZE:
             pfn = (prop_fn) alpm_pkg_get_size;
@@ -572,7 +592,7 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             /*cfn = (cmp_fn) strcmp;*/
             /*break;*/
         default:
-            printf("unimplemented field: %s\n", field);
+            printf("unimplemented field: %s\n", fieldname);
             return NULL;
             break;
     }
@@ -606,16 +626,7 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
                 return NULL;
             value = &reg;
             cfn = (cmp_fn) regex_cmp;
-            switch(cmp->type) {
-                case CMP_RE:
-                    efn = (eq_fn) eq;
-                    break;
-                case CMP_NR:
-                    efn = (eq_fn) ne;
-                    break;
-                default:
-                    break;
-            }
+            efn = cmp->type == CMP_RE ? (eq_fn) eq : (eq_fn) ne;
             break;
         default:
             printf("field: %s\n", field);
@@ -625,9 +636,21 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             break;
     }
 
-    for(; p; p = alpm_list_next(p)) {
-        if(efn(cfn(pfn(p->data), value))) {
-            ret = alpm_list_add(ret, p->data);
+    if(lfn) {
+        for(; p; p = alpm_list_next(p)) {
+            alpm_list_t *l = lfn(p->data);
+            for(; l; l = alpm_list_next(l) ) {
+                if(efn(cfn(pfn(l->data), value))) {
+                    ret = alpm_list_add(ret, p->data);
+                    break;
+                }
+            }
+        }
+    } else {
+        for(; p; p = alpm_list_next(p)) {
+            if(efn(cfn(pfn(p->data), value))) {
+                ret = alpm_list_add(ret, p->data);
+            }
         }
     }
 
