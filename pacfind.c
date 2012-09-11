@@ -394,6 +394,7 @@ node_t *parse_query(int argc, char **argv, int *i) {
 
 int parse_opts(int argc, char **argv, config_t *config) {
     int option_index = 0;
+    int qs_passed = 0;
     int c;
 
     static struct option long_options[] = {
@@ -424,9 +425,15 @@ int parse_opts(int argc, char **argv, config_t *config) {
                 usage(NULL);
                 break;
             case 'S':
+                if(!qs_passed)
+                    config->local = 0;
+                qs_passed = 1;
                 config->sync = 1;
                 break;
             case 'Q':
+                if(!qs_passed)
+                    config->sync = 0;
+                qs_passed = 1;
                 config->local = 1;
                 break;
             case 'd':
@@ -850,6 +857,8 @@ void print_pkgs(alpm_list_t *pkgs, config_t *config) {
 
 int main(int argc, char **argv) {
     config_t config = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    config.local = 1;
+    config.sync = 1;
     node_t *query;
     int i;
     alpm_list_t *matched;
