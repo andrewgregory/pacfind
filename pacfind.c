@@ -9,6 +9,8 @@
 #include "alpm.h"
 #include <alpm_list.h>
 
+alpm_list_t *all_pkgs = NULL;
+
 typedef enum field_t {
     FILENAME,
     NAME,
@@ -483,14 +485,7 @@ int regex_cmp(const char *val, regex_t *re) {
     return regexec(re, val, 0, 0, 0);
 }
 
-int intcmp(long *i1, long *i2) {
-    if( *i1 == *i2 )
-        return 0;
-    if( *i1 > *i2 )
-        return -1;
-    return 1;
-}
-
+int intcmp(long *i1, long *i2) { return *i2 - *i1; }
 
 int eq(int i) { return i == 0; }
 int ne(int i) { return i != 0; }
@@ -500,6 +495,59 @@ int lt(int i) { return i < 0; }
 int le(int i) { return i <= 0; }
 
 char *alpm_dep_get_name(alpm_depend_t *dep) { return dep->name; }
+
+alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg) {
+    char *end = strchr(selector, '.');
+    int recursive = 0;
+    field_t f;
+    list_fn lfn = NULL;
+    alpm_list_t *ret = NULL;
+
+    if(!end || end == selector) {
+        return NULL;
+    }
+
+    if(*end == '*') {
+        recursive = 1;
+        end--;
+    }
+
+    size_t j;
+    for( j = 0; field_map[j].input; j++) {
+        if( strncmp(selector, field_map[j].input, end - selector) == 0 ) {
+            f = field_map[j].field;
+            break;
+        }
+    }
+
+    switch(f) {
+        case DEPENDS:
+            lfn = (list_fn) alpm_pkg_get_depends;
+            break;
+        default:
+            printf("unimplemented selector: %s\n", selector);
+            return NULL;
+            break;
+    }
+
+    alpm_list_t *d = lfn(pkg);
+    for(; d; d = alpm_list_next(d) ) {
+        alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, alpm_dep_compute_string(d->data));
+        /*printf("%s\n", alpm_pkg_get_name(s));*/
+        if(!alpm_list_find_ptr(ret, s)) {
+            /*printf("adding...\n");*/
+            ret = alpm_list_add(ret, s);
+            /*if(recursive && !alpm_list_find(pkgs, s))*/
+                /*alpm_list_add(pkgs, s);*/
+        }
+    }
+
+    /*if(strchr(end + 2, '.')) {*/
+        /*ret = get_pkgs(end + 2, pkgs);*/
+    /*}*/
+
+    return ret;
+}
 
 alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     alpm_list_t *p = pkgs;
@@ -515,8 +563,18 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     regex_t reg;
 
     field_t field = 0;
-    char *fieldname = (char*) cmp->left;
+    char *fieldname = cmp->left;
     void *value = cmp->right;
+
+    if(strchr(fieldname, '.')) {
+        cmp->left = strrchr(fieldname, '.') + 1;
+        for(; pkgs; pkgs = alpm_list_next(pkgs)) {
+            alpm_list_t *p = get_pkgs(fieldname, pkgs->data);
+            if(p && filter_pkgs(cmp, p)) {
+                ret = alpm_list_add(ret, pkgs->data);
+            }
+        }
+    }
 
     int j;
     for( j = 0; field_map[j].input; j++) {
@@ -648,7 +706,10 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         }
     } else {
         for(; p; p = alpm_list_next(p)) {
-            if(efn(cfn(pfn(p->data), value))) {
+            /*printf("%s\n", alpm_pkg_get_name(p->data));*/
+            void *prop = pfn(p->data);
+
+            if(prop && efn(cfn(prop, value))) {
                 ret = alpm_list_add(ret, p->data);
             }
         }
@@ -791,19 +852,21 @@ int main(int argc, char **argv) {
     config_t config = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
     node_t *query;
     int i;
+    alpm_list_t *matched;
 
     /*alpm_errno_t err;*/
 
     i = parse_opts(argc, argv, &config);
     alpm_handle_t *handle = alpm_initialize("/", "/var/lib/pacman", NULL);
     query = parse_query(argc, argv, &i);
-    alpm_list_t *pkgs = build_pkg_list(handle, &config);
+    all_pkgs = build_pkg_list(handle, &config);
+    matched = alpm_list_copy(all_pkgs);
 
     if(query) {
-        pkgs = run_query(query, pkgs);
+        matched = run_query(query, matched);
         node_free(query);
     }
-    print_pkgs(pkgs, &config);
+    print_pkgs(matched, &config);
 
     return 0;
 }
