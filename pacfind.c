@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include <regex.h>
 
@@ -158,9 +159,11 @@ size_t strtrim(char *str)
     unsigned char *start = str, *end = str + strlen(str);
 
     for(; isspace(*start) && start < end; start++);
+    /*for(; end > start && isspace(*end); end--);*/
     for(; end > start && isspace(*(end - 1)); end--);
 
     memmove(str, start, end - start);
+    *(end) = '\0';
 
     return end - start;
 }
@@ -231,6 +234,7 @@ void usage(const char *msg) {
 "            -arch\n"
 "            -size\n"
 "            -isize\n"
+"            -depends\n"
 "\n"
 "        Cmp\n"
 "           (Defaults to -re if omitted)\n"
@@ -540,9 +544,7 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg) {
     alpm_list_t *d = lfn(pkg);
     for(; d; d = alpm_list_next(d) ) {
         alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, alpm_dep_compute_string(d->data));
-        /*printf("%s\n", alpm_pkg_get_name(s));*/
         if(!alpm_list_find_ptr(ret, s)) {
-            /*printf("adding...\n");*/
             ret = alpm_list_add(ret, s);
             /*if(recursive && !alpm_list_find(pkgs, s))*/
                 /*alpm_list_add(pkgs, s);*/
@@ -713,7 +715,6 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         }
     } else {
         for(; p; p = alpm_list_next(p)) {
-            /*printf("%s\n", alpm_pkg_get_name(p->data));*/
             void *prop = pfn(p->data);
 
             if(prop && efn(cfn(prop, value))) {
@@ -765,7 +766,7 @@ alpm_list_t *run_query(node_t *query, alpm_list_t *pkgs) {
     return filter_pkgs(query, pkgs);
 }
 
-alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config) {
+alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config, alpm_list_t *names) {
     alpm_list_t *pkgs = NULL;
     alpm_list_t *dblist = NULL;
 
@@ -807,13 +808,37 @@ alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config) {
         dblist = alpm_list_add(dblist, alpm_option_get_localdb(handle));
     }
 
-    alpm_list_t *d = dblist;
-    while(d) {
+    alpm_list_t *d;
+    for(d = dblist; d; d = alpm_list_next(d)) {
         alpm_list_t *p = alpm_db_get_pkgcache(d->data);
-        for( ; p; p = alpm_list_next(p)) {
-            pkgs = alpm_list_add(pkgs, p->data);
+        if(names) {
+            alpm_list_t *n;
+            for(n = names; n; n = alpm_list_next(n)) {
+                char *name = n->data;
+                char *s = strchr(name, '/');
+
+                if(s) {
+                    if(strncmp(name, alpm_db_get_name(d->data), s - name - 1) != 0) {
+                        continue;
+                    }
+                    name = s + 1;
+                }
+
+                alpm_list_t *p2 = p;
+                for( ; p2; p2 = alpm_list_next(p2)) {
+                    if(strcmp(alpm_pkg_get_name(p2->data), name) == 0) {
+                        pkgs = alpm_list_add(pkgs, p2->data);
+                    }
+                }
+            }
         }
-        d = alpm_list_next(d);
+        else {
+            for( ; p; p = alpm_list_next(p)) {
+                if(!names || alpm_list_find_str(names, alpm_pkg_get_name(p->data))) {
+                    pkgs = alpm_list_add(pkgs, p->data);
+                }
+            }
+        }
     }
 
     alpm_list_free(dblist);
@@ -861,14 +886,24 @@ int main(int argc, char **argv) {
     config.sync = 1;
     node_t *query;
     int i;
-    alpm_list_t *matched;
+    alpm_list_t *matched = NULL;
+    alpm_list_t *names = NULL;
+
+    if(!isatty(fileno(stdin))) {
+        char buffer[512];
+        while(fgets(buffer, 512, stdin)) {
+            if(strtrim(buffer)) {
+                names = alpm_list_add(names, strdup(buffer));
+            }
+        }
+    }
 
     /*alpm_errno_t err;*/
 
     i = parse_opts(argc, argv, &config);
     alpm_handle_t *handle = alpm_initialize("/", "/var/lib/pacman", NULL);
     query = parse_query(argc, argv, &i);
-    all_pkgs = build_pkg_list(handle, &config);
+    all_pkgs = build_pkg_list(handle, &config, names);
     matched = alpm_list_copy(all_pkgs);
 
     if(query) {

@@ -24,6 +24,10 @@ Pacman style searching::
 
     pacfind -Q pacman mirrorlist
 
+Search only explicitly installed packages::
+
+    pacman -Qqe | pacfind -- -desc perl
+
 License
 -------
 
