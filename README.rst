@@ -6,7 +6,111 @@ and memory leaks.  That being said, it is already capable of fairly advanced
 queries.
 
 Usage
-+++++
+-----
+
+    pacfind [-QSqs] [--] [OP] [FIELD] [CMP] value [JOIN] ...
+
+Options
+*******
+
+-Q
+    Search installed packages.  May be combined with ``-S``.
+
+-S
+    Search sync packages.  May be combined with ``-Q``.
+
+-q
+    Only print the names of matching packages.
+
+-s
+    No-op, provided for compatibility with pacman.
+
+Query Syntax
+************
+
+Operators
++++++++++
+
++ -not
++ -go - group queries
++ -gc - close query group
+
+Fields
+++++++
+
+If no field is specified name and description will be searched.
+
+String Scalars
+^^^^^^^^^^^^^^
+
++ -name
++ -desc
++ -filename
++ -url
++ -packager
++ -version
++ -md5sum
++ -sha256sum
+
+Integer Scalars
+^^^^^^^^^^^^^^^
+
++ -isize
++ -size
++ -builddate
++ -installdate
+
+Package Lists
+^^^^^^^^^^^^^
+
+Package list fields may be used alone or with a sub-selector separated by
+a period.  When used alone the package field will be searched directly for the
+term.  When used with a sub-selector, the field will be expanded to the
+packages it includes which will then be searched normally.  For example,
+``pacfind -Q -- -depends bash`` will find only those packages which explicitly
+depend on ``bash`` whereas ``pacfind -Q -- -depends.name bash`` will also find
+packages whose dependency on ``sh`` is satisfied by ``bash``.
+
++ -depends
+
+.. + -optdepends (unimplemented)
+.. + -requiredby (unimplemented)
+.. + -conflicts (unimplemented)
+.. + -provides (unimplemented)
+.. + -replaces (unimplemented)
+
+.. String Lists
+.. ^^^^^^^^^^^^
+
+.. + -arch (unimplemented)
+.. + -licenses (unimplemented)
+
+Comparison Operators
+++++++++++++++++++++
+
+If no comparison operator is provided ``-re`` will be used for string fields
+and ``-eq`` for numeric fields.
+
++ -eq
++ -ne
++ -gt
++ -ge
++ -lt
++ -le
++ -re
++ -ne
+
+Join Operators
+++++++++++++++
+
+If no join operator is provided, ``-and`` will be used.
+
++ -and
++ -or
++ -xor
+
+Examples
+********
 
 Find libreoffice packages but exclude language packs::
 
@@ -16,9 +120,9 @@ Find broken packages::
 
     pacfind -Q -- -packager allan
 
-Find packages that depend on perl::
+Find packages that depend on a package that depends on perl::
 
-    pacfind -Q -- -depends.name perl
+    pacfind -Q -- -depends.depends.name perl
 
 Pacman style searching::
 
