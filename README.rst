@@ -148,3 +148,5 @@ TODO
 + Allow human readable dates and sizes for values ``-isize -gt 50MB``
 + Fix the multitude of segfaults and memory leaks
 + ``-requiredby`` and ``-satisfies`` fields
++ Optimize node resolution order
++ Threads
