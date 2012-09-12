@@ -134,6 +134,9 @@ void usage(const char *msg) {
 }
 
 node_t *parse_node(int argc, char **argv, int *i) {
+    if(*i >= argc)
+        return NULL;
+
     char *arg = argv[(*i)++];
     char *cmp = NULL;
     int j;
@@ -210,6 +213,11 @@ node_t *parse_query(int argc, char **argv, int *i) {
             case OP_AND:
             case OP_OR:
             case OP_XOR:
+                if(node->right) {
+                    op = node_new(OP_AND, NULL, NULL);
+                    break;
+                }
+
                 op = node;
                 node = parse_node(argc, argv, i);
 
@@ -404,7 +412,9 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg) {
 
     alpm_list_t *d = lfn(pkg);
     for(; d; d = alpm_list_next(d) ) {
-        alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, alpm_dep_compute_string(d->data));
+        char *dep_string = alpm_dep_compute_string(d->data);
+        alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, dep_string);
+        free(dep_string);
         if(!alpm_list_find_ptr(ret, s)) {
             ret = alpm_list_add(ret, s);
             /*if(recursive && !alpm_list_find(pkgs, s))*/
@@ -423,6 +433,8 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     alpm_list_t *p = pkgs;
     alpm_list_t *ret = NULL;
 
+    char *c;
+
     long tmp;
 
     list_fn lfn = NULL;
@@ -436,14 +448,19 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     char *fieldname = cmp->left;
     void *value = cmp->right;
 
-    if(strchr(fieldname, '.')) {
-        cmp->left = strrchr(fieldname, '.') + 1;
+    if((c = strchr(fieldname, '.'))) {
+        cmp->left = c + 1;
         for(; pkgs; pkgs = alpm_list_next(pkgs)) {
-            alpm_list_t *p = get_pkgs(fieldname, pkgs->data);
-            if(p && filter_pkgs(cmp, p)) {
+            p = get_pkgs(fieldname, pkgs->data);
+            alpm_list_t *m;
+            if(p && (m = filter_pkgs(cmp, p))) {
                 ret = alpm_list_add(ret, pkgs->data);
+                alpm_list_free(m);
             }
+            alpm_list_free(p);
         }
+        cmp->left = fieldname;
+        return ret;
     }
 
     int j;
@@ -584,12 +601,16 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         }
     }
 
+    if(cmp->type == CMP_RE || cmp->type == CMP_NR) {
+        regfree(value);
+    }
+
     return ret;
 }
 
 alpm_list_t *run_query(node_t *query, alpm_list_t *pkgs) {
     if( query == NULL ) {
-        return pkgs;
+        return alpm_list_copy(pkgs);
     }
 
     alpm_list_t *left;
@@ -739,6 +760,7 @@ void print_pkgs(alpm_list_t *pkgs, config_t *config) {
             dump_pkg_short(i->data, verbosity);
         }
     }
+    alpm_list_free(pkgs);
 }
 
 int main(int argc, char **argv) {
@@ -765,13 +787,17 @@ int main(int argc, char **argv) {
     alpm_handle_t *handle = alpm_initialize("/", "/var/lib/pacman", NULL);
     query = parse_query(argc, argv, &i);
     all_pkgs = build_pkg_list(handle, &config, names);
-    matched = alpm_list_copy(all_pkgs);
 
     if(query) {
-        matched = run_query(query, matched);
+        matched = run_query(query, all_pkgs);
         node_free(query);
     }
     print_pkgs(matched, &config);
+
+    alpm_list_free(all_pkgs);
+    alpm_list_free(matched);
+
+    alpm_release(handle);
 
     return 0;
 }
