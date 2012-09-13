@@ -405,6 +405,10 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg, alpm_list_t *ret) {
         case DEPENDS:
             lfn = (list_fn) alpm_pkg_get_depends;
             break;
+        case OPTDEPENDS:
+            lfn = (list_fn) alpm_pkg_get_optdepends;
+            pfn = (prop_fn) strdup;
+            break;
         case PROVIDES:
             lfn = (list_fn) alpm_pkg_get_provides;
             break;
@@ -416,7 +420,7 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg, alpm_list_t *ret) {
             break;
         case REQUIREDBY:
             lfn = (list_fn) alpm_pkg_compute_requiredby;
-            pfn = NULL;
+            pfn = (prop_fn) strdup;
             need_deep_free = 1;
             break;
         default:
@@ -425,8 +429,8 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg, alpm_list_t *ret) {
             break;
     }
 
-    alpm_list_t *d = lfn(pkg);
-    for(; d; d = alpm_list_next(d) ) {
+    alpm_list_t *d, *plist = lfn(pkg);
+    for(d = plist; d; d = alpm_list_next(d) ) {
         char *dep_string = pfn ? pfn(d->data) : d->data;;
         alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, dep_string);
         free(dep_string);
@@ -438,7 +442,7 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg, alpm_list_t *ret) {
         }
     }
     if(need_deep_free) {
-        alpm_list_free_inner(d, free);
+        FREELIST(plist);
     }
 
     return ret;
@@ -500,6 +504,10 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         case DEPENDS:
             lfn = (list_fn) alpm_pkg_get_depends;
             pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case OPTDEPENDS:
+            lfn = (list_fn) alpm_pkg_get_optdepends;
+            pfn = NULL;
             break;
         case PROVIDES:
             lfn = (list_fn) alpm_pkg_get_provides;

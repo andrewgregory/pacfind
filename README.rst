@@ -73,6 +73,7 @@ packages whose dependency on ``sh`` is satisfied by ``bash``.  In the second
 form, these may be followed by '%' to search recursively.
 
 + -depends
++ -optdepends
 + -conflicts
 + -provides
 + -replaces
@@ -154,5 +155,4 @@ TODO
   - arch
   - groups
   - script
-  - optdepends
   - installreason
