@@ -501,35 +501,6 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         case DESC:
             pfn = (prop_fn) alpm_pkg_get_desc;
             break;
-        case DEPENDS:
-            lfn = (list_fn) alpm_pkg_get_depends;
-            pfn = (prop_fn) alpm_dep_get_name;
-            break;
-        case OPTDEPENDS:
-            lfn = (list_fn) alpm_pkg_get_optdepends;
-            pfn = NULL;
-            break;
-        case PROVIDES:
-            lfn = (list_fn) alpm_pkg_get_provides;
-            pfn = (prop_fn) alpm_dep_get_name;
-            break;
-        case REQUIREDBY:
-            lfn = (list_fn) alpm_pkg_compute_requiredby;
-            pfn = NULL;
-            need_deep_free = 1;
-            break;
-        case CONFLICTS:
-            lfn = (list_fn) alpm_pkg_get_conflicts;
-            pfn = (prop_fn) alpm_dep_get_name;
-            break;
-        case REPLACES:
-            lfn = (list_fn) alpm_pkg_get_replaces;
-            pfn = (prop_fn) alpm_dep_get_name;
-            break;
-        /*case OPTDEPENDS:*/
-            /*lfn = (list_fn) alpm_pkg_get_optdepends;*/
-            /*pfn = (prop_fn) alpm_dep_get_name;*/
-            /*break;*/
         case VERSION:
             pfn = (prop_fn) alpm_pkg_get_version;
             cfn = (cmp_fn) alpm_pkg_vercmp;
@@ -577,6 +548,42 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             /*pfn = (prop_fn) alpm_pkg_get_base64sig;*/
             /*cfn = (cmp_fn) strcmp;*/
             /*break;*/
+
+        case LICENSE:
+            lfn = (list_fn) alpm_pkg_get_licenses;
+            pfn = NULL;
+            break;
+        case GROUP:
+            lfn = (list_fn) alpm_pkg_get_groups;
+            pfn = NULL;
+            break;
+
+        case DEPENDS:
+            lfn = (list_fn) alpm_pkg_get_depends;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case OPTDEPENDS:
+            lfn = (list_fn) alpm_pkg_get_optdepends;
+            pfn = NULL;
+            break;
+        case PROVIDES:
+            lfn = (list_fn) alpm_pkg_get_provides;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case REQUIREDBY:
+            lfn = (list_fn) alpm_pkg_compute_requiredby;
+            pfn = NULL;
+            need_deep_free = 1;
+            break;
+        case CONFLICTS:
+            lfn = (list_fn) alpm_pkg_get_conflicts;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case REPLACES:
+            lfn = (list_fn) alpm_pkg_get_replaces;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+
         default:
             printf("unimplemented field: %s\n", fieldname);
             return NULL;

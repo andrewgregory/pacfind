@@ -80,6 +80,12 @@ form, these may be followed by '%' to search recursively.
 + -requiredby - pacfind will **NOT** limit this to local packages; you probably
   only want to use this in conjunction with ``-Q``.
 
+String Lists
+^^^^^^^^^^^^
+
++ -license
++ -group
+
 Comparison Operators
 ++++++++++++++++++++
 
@@ -151,8 +157,5 @@ TODO
 + Remaining Fields:
 
   - satisifes
-  - licenses
-  - arch
-  - groups
   - script
   - installreason

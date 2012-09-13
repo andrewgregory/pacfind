@@ -8,8 +8,8 @@ typedef enum field_t {
     VERSION,
     ORIGIN,
     REASON,
-    LICENSES,
-    GROUPS,
+    LICENSE,
+    GROUP,
 
     DEPENDS,
     OPTDEPENDS,
@@ -45,6 +45,9 @@ static field_map_t field_map[] = {
     {"name", NAME},
     {"desc", DESC},
     {"version", VERSION},
+
+    {"license", LICENSE},
+    {"group", GROUP},
 
     {"depends", DEPENDS},
     {"optdepends", OPTDEPENDS},
