@@ -69,21 +69,15 @@ term.  When used with a sub-selector, the field will be expanded to the
 packages it includes which will then be searched normally.  For example,
 ``pacfind -Q -- -depends bash`` will find only those packages which explicitly
 depend on ``bash`` whereas ``pacfind -Q -- -depends.name bash`` will also find
-packages whose dependency on ``sh`` is satisfied by ``bash``.
+packages whose dependency on ``sh`` is satisfied by ``bash``.  In the second
+form, these may be followed by '%' to search recursively.
 
 + -depends
-
-.. + -optdepends (unimplemented)
-.. + -requiredby (unimplemented)
-.. + -conflicts (unimplemented)
-.. + -provides (unimplemented)
-.. + -replaces (unimplemented)
-
-.. String Lists
-.. ^^^^^^^^^^^^
-
-.. + -arch (unimplemented)
-.. + -licenses (unimplemented)
++ -conflicts
++ -provides
++ -replaces
++ -requiredby - pacfind will **NOT** limit this to local packages; you probably
+  only want to use this in conjunction with ``-Q``.
 
 Comparison Operators
 ++++++++++++++++++++
@@ -132,6 +126,10 @@ Search only explicitly installed packages::
 
     pacman -Qqe | pacfind -- -desc perl
 
+Search for packages with perl anywhere in their dependency chains::
+
+    pacfind -- -depends%.name perl
+
 License
 -------
 
@@ -144,9 +142,17 @@ TODO
 + Add ``--format`` option
 + Complete feature parity with ``pacman -Qs`` and ``pacman -Ss``
 + Pacman style output
-+ Add support for list fields and operators: ``-depends.name pacman``
 + Allow human readable dates and sizes for values ``-isize -gt 50MB``
++ List field counts
 + Fix the multitude of segfaults and memory leaks
-+ ``-requiredby`` and ``-satisfies`` fields
 + Optimize node resolution order
 + Threads
++ Remaining Fields:
+
+  - satisifes
+  - licenses
+  - arch
+  - groups
+  - script
+  - optdepends
+  - installreason

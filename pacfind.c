@@ -376,18 +376,19 @@ int le(int i) { return i <= 0; }
 
 char *alpm_dep_get_name(alpm_depend_t *dep) { return dep->name; }
 
-alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg) {
+alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg, alpm_list_t *ret) {
     char *end = strchr(selector, '.');
     int recursive = 0;
     field_t f;
     list_fn lfn = NULL;
-    alpm_list_t *ret = NULL;
+    prop_fn pfn = (prop_fn) alpm_dep_compute_string;
+    int need_deep_free = 0;
 
     if(!end || end == selector) {
-        return NULL;
+        return ret;
     }
 
-    if(*end == '*') {
+    if(*(end - 1) == '%') {
         recursive = 1;
         end--;
     }
@@ -404,27 +405,41 @@ alpm_list_t *get_pkgs(char *selector, alpm_pkg_t *pkg) {
         case DEPENDS:
             lfn = (list_fn) alpm_pkg_get_depends;
             break;
+        case PROVIDES:
+            lfn = (list_fn) alpm_pkg_get_provides;
+            break;
+        case CONFLICTS:
+            lfn = (list_fn) alpm_pkg_get_conflicts;
+            break;
+        case REPLACES:
+            lfn = (list_fn) alpm_pkg_get_replaces;
+            break;
+        case REQUIREDBY:
+            lfn = (list_fn) alpm_pkg_compute_requiredby;
+            pfn = NULL;
+            need_deep_free = 1;
+            break;
         default:
             printf("unimplemented selector: %s\n", selector);
-            return NULL;
+            return ret;
             break;
     }
 
     alpm_list_t *d = lfn(pkg);
     for(; d; d = alpm_list_next(d) ) {
-        char *dep_string = alpm_dep_compute_string(d->data);
+        char *dep_string = pfn ? pfn(d->data) : d->data;;
         alpm_pkg_t *s = alpm_find_satisfier(all_pkgs, dep_string);
         free(dep_string);
         if(!alpm_list_find_ptr(ret, s)) {
             ret = alpm_list_add(ret, s);
-            /*if(recursive && !alpm_list_find(pkgs, s))*/
-                /*alpm_list_add(pkgs, s);*/
+            if(recursive) {
+                ret = get_pkgs(selector, s, ret);
+            }
         }
     }
-
-    /*if(strchr(end + 2, '.')) {*/
-        /*ret = get_pkgs(end + 2, pkgs);*/
-    /*}*/
+    if(need_deep_free) {
+        alpm_list_free_inner(d, free);
+    }
 
     return ret;
 }
@@ -434,6 +449,7 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     alpm_list_t *ret = NULL;
 
     char *c;
+    int need_deep_free = 0;
 
     long tmp;
 
@@ -451,7 +467,7 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
     if((c = strchr(fieldname, '.'))) {
         cmp->left = c + 1;
         for(; pkgs; pkgs = alpm_list_next(pkgs)) {
-            p = get_pkgs(fieldname, pkgs->data);
+            p = get_pkgs(fieldname, pkgs->data, NULL);
             alpm_list_t *m;
             if(p && (m = filter_pkgs(cmp, p))) {
                 ret = alpm_list_add(ret, pkgs->data);
@@ -483,6 +499,23 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             break;
         case DEPENDS:
             lfn = (list_fn) alpm_pkg_get_depends;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case PROVIDES:
+            lfn = (list_fn) alpm_pkg_get_provides;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case REQUIREDBY:
+            lfn = (list_fn) alpm_pkg_compute_requiredby;
+            pfn = NULL;
+            need_deep_free = 1;
+            break;
+        case CONFLICTS:
+            lfn = (list_fn) alpm_pkg_get_conflicts;
+            pfn = (prop_fn) alpm_dep_get_name;
+            break;
+        case REPLACES:
+            lfn = (list_fn) alpm_pkg_get_replaces;
             pfn = (prop_fn) alpm_dep_get_name;
             break;
         /*case OPTDEPENDS:*/
@@ -583,12 +616,17 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
 
     if(lfn) {
         for(; p; p = alpm_list_next(p)) {
-            alpm_list_t *l = lfn(p->data);
-            for(; l; l = alpm_list_next(l) ) {
-                if(efn(cfn(pfn(l->data), value))) {
+            alpm_list_t *plist = lfn(p->data);
+            alpm_list_t *l;
+            for(l = plist; l; l = alpm_list_next(l) ) {
+                void *prop = pfn ? pfn(p->data) : l->data;
+                if(efn(cfn(prop, value))) {
                     ret = alpm_list_add(ret, p->data);
                     break;
                 }
+            }
+            if(need_deep_free) {
+                FREELIST(plist);
             }
         }
     } else {
