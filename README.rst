@@ -98,7 +98,7 @@ and ``-eq`` for numeric fields.
 + -lt
 + -le
 + -re
-+ -ne
++ -nr
 
 Join Operators
 ++++++++++++++
