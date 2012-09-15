@@ -8,7 +8,7 @@ queries.
 Usage
 -----
 
-    pacfind [-QSqs] [--] [OP] [FIELD] [CMP] value [JOIN] ...
+    pacfind [-QSqsedtm] [--] [OP] [FIELD] [CMP] value [JOIN] ...
 
 Options
 *******
@@ -24,6 +24,18 @@ Options
 
 -s
     No-op, provided for compatibility with pacman.
+
+-e
+    Limit to explicitly installed packages.
+
+-d
+    Limit to packages installed as dependencies.
+
+-t
+    Limit to unneeded packages.
+
+-m
+    Limit to packages not in a repo.
 
 Query Syntax
 ************

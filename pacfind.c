@@ -705,38 +705,38 @@ alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config, alpm_list_t
     alpm_list_t *pkgs = NULL;
     alpm_list_t *dblist = NULL;
 
-    if(config->sync) {
-        FILE *fp;
-        fp = fopen("/etc/pacman.conf", "r");
-        char line[512];
-        const alpm_siglevel_t level = ALPM_SIG_DATABASE | ALPM_SIG_DATABASE_OPTIONAL;
+    FILE *fp;
+    fp = fopen("/etc/pacman.conf", "r");
+    char line[512];
+    const alpm_siglevel_t level = ALPM_SIG_DATABASE | ALPM_SIG_DATABASE_OPTIONAL;
 
-        while(fgets(line, 512, fp)) {
-            size_t linelen;
-            char *ptr;
+    while(fgets(line, 512, fp)) {
+        size_t linelen;
+        char *ptr;
 
-            if((ptr = strchr(line, '#'))) {
-                *ptr = '\0';
-            }
-
-            linelen = strtrim(line);
-
-            if(linelen < 3) {
-                continue;
-            }
-
-            if(line[0] == '[' && line[linelen - 1] == ']') {
-                line[linelen - 1] = '\0';
-                ptr = line + 1;
-
-                if(strcmp(ptr, "options") != 0) {
-                    alpm_db_register_sync(handle, ptr, level);
-                }
-            }
+        if((ptr = strchr(line, '#'))) {
+            *ptr = '\0';
         }
 
-        fclose(fp);
+        linelen = strtrim(line);
 
+        if(linelen < 3) {
+            continue;
+        }
+
+        if(line[0] == '[' && line[linelen - 1] == ']') {
+            line[linelen - 1] = '\0';
+            ptr = line + 1;
+
+            if(strcmp(ptr, "options") != 0) {
+                alpm_db_register_sync(handle, ptr, level);
+            }
+        }
+    }
+
+    fclose(fp);
+
+    if(config->sync && !(config->depends || config->explicit || config->unneeded || config->foreign)) {
         dblist = alpm_list_join(dblist, alpm_list_copy(alpm_option_get_syncdbs(handle)));
     }
     if(config->local) {
@@ -841,11 +841,53 @@ int main(int argc, char **argv) {
     query = parse_query(argc, argv, &i);
     all_pkgs = build_pkg_list(handle, &config, names);
 
+    if(config.depends) {
+        alpm_list_t *p;
+        for(p = all_pkgs; p; p = alpm_list_next(p)) {
+            if(alpm_pkg_get_reason(p->data) != ALPM_PKG_REASON_DEPEND) {
+                all_pkgs = alpm_list_remove_item(all_pkgs, p);
+            }
+        }
+    }
+
+    if(config.explicit) {
+        alpm_list_t *p;
+        for(p = all_pkgs; p; p = alpm_list_next(p)) {
+            if(alpm_pkg_get_reason(p->data) != ALPM_PKG_REASON_EXPLICIT) {
+                all_pkgs = alpm_list_remove_item(all_pkgs, p);
+            }
+        }
+    }
+
+    if(config.unneeded) {
+        alpm_list_t *p;
+        for(p = all_pkgs; p; p = alpm_list_next(p)) {
+            alpm_list_t *r = alpm_pkg_compute_requiredby(p->data);
+            if(r) {
+                all_pkgs = alpm_list_remove_item(all_pkgs, p);
+                FREELIST(r);
+            }
+        }
+    }
+
+    if(config.foreign) {
+        alpm_list_t *p, *dbs = alpm_option_get_syncdbs(handle);
+        for(; dbs; dbs = alpm_list_next(dbs)) {
+            for(p = all_pkgs; p; p = alpm_list_next(p)) {
+                if(alpm_db_get_pkg(dbs->data, alpm_pkg_get_name(p->data))) {
+                    all_pkgs = alpm_list_remove_item(all_pkgs, p);
+                }
+            }
+        }
+    }
+
     if(query) {
         matched = run_query(query, all_pkgs);
         node_free(query);
+        print_pkgs(matched, &config);
+    } else {
+        print_pkgs(all_pkgs, &config);
     }
-    print_pkgs(matched, &config);
 
     alpm_list_free(all_pkgs);
     alpm_list_free(matched);
