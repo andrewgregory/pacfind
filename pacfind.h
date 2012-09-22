@@ -155,4 +155,6 @@ static input_map_t cmp_map[] = {
     {NULL, 0}
 };
 
+void print_pkgs(alpm_list_t *pkgs, config_t *config);
+
 #endif /* PACFIND_H */

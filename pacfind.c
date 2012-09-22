@@ -203,7 +203,7 @@ node_t *parse_query(int argc, char **argv, int *i) {
     if(*i >= argc)
         return NULL;
 
-    node_t *query = parse_node(argc, argv, i);
+    node_t *query = NULL;
 
     while(*i < argc) {
         node_t *node = parse_node(argc, argv, i);
@@ -796,7 +796,7 @@ void dump_pkg_full(alpm_pkg_t *pkg, int verbosity) {
 }
 
 void print_pkgs(alpm_list_t *pkgs, config_t *config) {
-    int verbosity = config->info_level - config->quiet;
+    int verbosity = config ? config->info_level - config->quiet : 0;
     if(pkgs == NULL) {
         return;
     }
@@ -804,7 +804,7 @@ void print_pkgs(alpm_list_t *pkgs, config_t *config) {
     pkgs = alpm_list_remove_dupes(pkgs);
 
     alpm_list_t *i;
-    if(config->info_level) {
+    if(config && config->info_level) {
         for(i = pkgs; i; i = alpm_list_next(i)) {
             dump_pkg_full(i->data, verbosity);
         }
