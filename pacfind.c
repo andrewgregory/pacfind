@@ -683,6 +683,7 @@ alpm_list_t *run_query(node_t *query, alpm_list_t *pkgs) {
             left = run_query(query->left, pkgs);
             right = run_query(query->right, pkgs);
             pkgs = alpm_list_join(left, right);
+            pkgs = alpm_list_remove_dupes(pkgs);
             return pkgs;
             break;
         case OP_XOR:
