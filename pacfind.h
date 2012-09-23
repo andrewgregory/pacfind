@@ -48,6 +48,7 @@ static field_map_t field_map[] = {
 
     {"license", LICENSE},
     {"group", GROUP},
+    {"groups", GROUP},
 
     {"depends", DEPENDS},
     {"optdepends", OPTDEPENDS},
