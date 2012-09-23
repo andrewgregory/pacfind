@@ -139,6 +139,7 @@ node_t *parse_node(int argc, char **argv, int *i) {
 
     char *arg = argv[(*i)++];
     char *cmp = NULL;
+    ntype_t t = CMP_DEFAULT;
     int j;
 
     /* handle join operators */
@@ -158,20 +159,22 @@ node_t *parse_node(int argc, char **argv, int *i) {
             if(*i >= argc) {
                 return NULL;
             }
-
+            t = cmp_map[j].type;
             arg = argv[(*i)++];
-            ntype_t t = cmp_map[j].type;
-            node_t *n1 = node_new(t, strdup("name"), strdup(arg));
-            node_t *n2 = node_new(t, strdup("desc"), strdup(arg));
-            return node_new(OP_OR, n1, n2);
         }
     }
 
     /* Handle pacman style queries */
     if(*arg != '-') {
-        node_t *n1 = node_new(CMP_RE, strdup("name"), strdup(arg));
-        node_t *n2 = node_new(CMP_RE, strdup("desc"), strdup(arg));
-        return node_new(OP_OR, n1, n2);
+        node_t *n1 = node_new(t, strdup("name"), strdup(arg));
+        node_t *n2 = node_new(t, strdup("desc"), strdup(arg));
+        node_t *o1 = node_new(OP_OR, n1, n2);
+
+        node_t *n3 = node_new(t, strdup("provides"), strdup(arg));
+        node_t *n4 = node_new(t, strdup("group"), strdup(arg));
+        node_t *o2 = node_new(OP_OR, n3, n4);
+
+        return node_new(OP_OR, o1, o2);
     }
 
     /* remove leading '-' from field names */
@@ -185,18 +188,18 @@ node_t *parse_node(int argc, char **argv, int *i) {
     }
     cmp = argv[(*i)++];
 
-    for( j = 0; cmp_map[j].input; j++ ) {
+    for( j = 0; cmp_map[j].input && t == CMP_DEFAULT; j++ ) {
         if( strcmp(cmp, cmp_map[j].input) == 0 ) {
             if(*i >= argc) {
                 return NULL;
             }
 
             cmp = argv[(*i)++];
-            return node_new(cmp_map[j].type, strdup(arg), strdup(cmp));
+            t = cmp_map[j].type;
         }
     }
 
-    return node_new(CMP_DEFAULT, strdup(arg), strdup(cmp));
+    return node_new(t, strdup(arg), strdup(cmp));
 }
 
 node_t *parse_query(int argc, char **argv, int *i) {
