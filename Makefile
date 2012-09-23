@@ -1,7 +1,14 @@
-LDFLAGS= -lalpm
-CFLAGS= -g
+LDFLAGS = -lalpm
+CFLAGS  = -g
 
-all: pacfind
+PREFIX    ?= /usr/local
+MANPREFIX ?= ${PREFIX}/share/man
 
-install: all
-	install -D pacfind $(DESTDIR)/usr/bin/pacfind
+all: pacfind doc
+
+doc: README.rst
+	rst2man2 README.rst > pacfind.1
+
+install: all doc
+	install -D -m755 pacfind $(DESTDIR)${PREFIX}/bin/pacfind
+	install -D -m644 pacfind.1 ${DESTDIR}${MANPREFIX}/man1/pacfind.1
