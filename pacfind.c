@@ -637,7 +637,7 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
             alpm_list_t *plist = lfn(p->data);
             alpm_list_t *l;
             for(l = plist; l; l = alpm_list_next(l) ) {
-                void *prop = pfn ? pfn(p->data) : l->data;
+                void *prop = pfn ? pfn(l->data) : l->data;
                 if(efn(cfn(prop, value))) {
                     ret = alpm_list_add(ret, p->data);
                     break;
