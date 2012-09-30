@@ -2,6 +2,7 @@ LDFLAGS = -lalpm
 CFLAGS  = -g
 
 PREFIX    ?= /usr/local
+DESTDIR   ?=
 MANPREFIX ?= ${PREFIX}/share/man
 
 all: pacfind doc
