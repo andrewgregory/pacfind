@@ -1,3 +1,4 @@
 pacfind
 *.o
 *.swp
+a.out
