@@ -64,13 +64,13 @@ String Scalars
 + -md5sum
 + -sha256sum
 
-Integer Scalars
-^^^^^^^^^^^^^^^
-
-+ -isize
-+ -size
-+ -builddate
-+ -installdate
+..
+    Integer Scalars
+    ^^^^^^^^^^^^^^^
+    + -isize
+    + -size
+    + -builddate
+    + -installdate
 
 Package Lists
 ^^^^^^^^^^^^^
@@ -171,3 +171,5 @@ TODO
   - satisifes
   - script
   - installreason
+  - size
+  - date

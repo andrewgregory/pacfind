@@ -511,18 +511,18 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         case URL:
             pfn = (prop_fn) alpm_pkg_get_url;
             break;
-        case BUILDDATE:
-            pfn = (prop_fn) alpm_pkg_get_builddate;
-            cfn = (cmp_fn) intcmp;
-            tmp = atol(value);
-            value = &tmp;
-            break;
-        case INSTALLDATE:
-            pfn = (prop_fn) alpm_pkg_get_installdate;
-            cfn = (cmp_fn) intcmp;
-            tmp = atol(value);
-            value = &tmp;
-            break;
+        /*case BUILDDATE:*/
+            /*pfn = (prop_fn) alpm_pkg_get_builddate;*/
+            /*cfn = (cmp_fn) intcmp;*/
+            /*tmp = atol(value);*/
+            /*value = &tmp;*/
+            /*break;*/
+        /*case INSTALLDATE:*/
+            /*pfn = (prop_fn) alpm_pkg_get_installdate;*/
+            /*cfn = (cmp_fn) intcmp;*/
+            /*tmp = atol(value);*/
+            /*value = &tmp;*/
+            /*break;*/
         case PACKAGER:
             pfn = (prop_fn) alpm_pkg_get_packager;
             break;
@@ -535,18 +535,18 @@ alpm_list_t *filter_pkgs(node_t *cmp, alpm_list_t *pkgs) {
         case ARCH:
             pfn = (prop_fn) alpm_pkg_get_arch;
             break;
-        case SIZE:
-            pfn = (prop_fn) alpm_pkg_get_size;
-            cfn = (cmp_fn) intcmp;
-            tmp = atol(value);
-            value = &tmp;
-            break;
-        case ISIZE:
-            pfn = (prop_fn) alpm_pkg_get_isize;
-            cfn = (cmp_fn) intcmp;
-            tmp = atol(value);
-            value = &tmp;
-            break;
+        /*case SIZE:*/
+            /*pfn = (prop_fn) alpm_pkg_get_size;*/
+            /*cfn = (cmp_fn) intcmp;*/
+            /*tmp = atol(value);*/
+            /*value = &tmp;*/
+            /*break;*/
+        /*case ISIZE:*/
+            /*pfn = (prop_fn) alpm_pkg_get_isize;*/
+            /*cfn = (cmp_fn) intcmp;*/
+            /*tmp = atol(value);*/
+            /*value = &tmp;*/
+            /*break;*/
         /*case BASE64SIG:*/
             /*pfn = (prop_fn) alpm_pkg_get_base64sig;*/
             /*cfn = (cmp_fn) strcmp;*/
