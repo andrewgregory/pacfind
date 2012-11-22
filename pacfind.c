@@ -262,7 +262,6 @@ node_t *parse_query(int argc, char **argv, int *i) {
         op->left = query;
         op->right = node;
         query = op;
-        (*i)++;
     }
 
     return query;
