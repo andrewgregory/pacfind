@@ -14,6 +14,16 @@
 
 alpm_list_t *all_pkgs = NULL;
 
+typedef struct palette_t {
+    char *base;
+    char *repo;
+    char *pkgname;
+    char *pkgver;
+    char *groups;
+    char *installed;
+} palette_t;
+
+palette_t palette = {"", "", "", "", "", ""};
 
 size_t strtrim(char *str)
 {
@@ -287,6 +297,7 @@ int parse_opts(int argc, char **argv, config_t *config) {
         {"list"       , optional_argument , NULL , 'l'} ,
         {"repo"       , optional_argument , NULL , 'r'} ,
         {"groups"     , required_argument , NULL , 'g'} ,
+        {"color"      , no_argument       , NULL , 'c'} ,
         {0, 0, 0, 0}
     };
 
@@ -295,6 +306,14 @@ int parse_opts(int argc, char **argv, config_t *config) {
 
         switch(c) {
             case 0:
+                break;
+            case 'c':
+                palette.base = "\e[0m";
+                palette.repo = "\e[0;34m";
+                palette.pkgname = "\e[0;31m";
+                palette.pkgver = "\e[0;36m";
+                palette.groups = "\e[0;33m";
+                palette.installed = "\e[0;35m";
                 break;
             case 'h':
                 usage(NULL);
@@ -788,9 +807,28 @@ void dump_pkg_short(alpm_pkg_t *pkg, int verbosity) {
     if(verbosity < 0) {
         puts(alpm_pkg_get_name(pkg));
     } else {
-        printf("%s/%s %s\n", alpm_db_get_name(alpm_pkg_get_db(pkg)),
-                alpm_pkg_get_name(pkg), alpm_pkg_get_version(pkg));
-        printf("    %s\n", alpm_pkg_get_desc(pkg));
+        alpm_list_t *groups = alpm_pkg_get_groups(pkg);
+        printf("%s%s%s/%s%s %s%s%s",
+                palette.repo, alpm_db_get_name(alpm_pkg_get_db(pkg)),
+                palette.base,
+                palette.pkgname, alpm_pkg_get_name(pkg),
+                palette.pkgver, alpm_pkg_get_version(pkg),
+                palette.base);
+        if(groups) {
+            fputs(palette.groups, stdout);
+            fputs(" (", stdout);
+            while(groups) {
+                fputs(groups->data, stdout);
+                groups = groups->next;
+                if(groups) {
+                    fputs(", ", stdout);
+                }
+            }
+            fputs(")", stdout);
+            fputs(palette.base, stdout);
+        }
+
+        printf("\n    %s\n", alpm_pkg_get_desc(pkg));
     }
 }
 
