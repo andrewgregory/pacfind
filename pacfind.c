@@ -751,7 +751,7 @@ alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config, alpm_list_t
             ptr = line + 1;
 
             if(strcmp(ptr, "options") != 0) {
-                alpm_db_register_sync(handle, ptr, level);
+                alpm_register_syncdb(handle, ptr, level);
             }
         }
     }
@@ -759,10 +759,10 @@ alpm_list_t *build_pkg_list(alpm_handle_t *handle, config_t *config, alpm_list_t
     fclose(fp);
 
     if(config->sync && !(config->depends || config->explicit || config->unneeded || config->foreign)) {
-        dblist = alpm_list_join(dblist, alpm_list_copy(alpm_option_get_syncdbs(handle)));
+        dblist = alpm_list_join(dblist, alpm_list_copy(alpm_get_syncdbs(handle)));
     }
     if(config->local) {
-        dblist = alpm_list_add(dblist, alpm_option_get_localdb(handle));
+        dblist = alpm_list_add(dblist, alpm_get_localdb(handle));
     }
 
     alpm_list_t *d;
@@ -912,7 +912,7 @@ int main(int argc, char **argv) {
     }
 
     if(config.foreign) {
-        alpm_list_t *p, *dbs = alpm_option_get_syncdbs(handle);
+        alpm_list_t *p, *dbs = alpm_get_syncdbs(handle);
         for(; dbs; dbs = alpm_list_next(dbs)) {
             for(p = all_pkgs; p; p = alpm_list_next(p)) {
                 if(alpm_db_get_pkg(dbs->data, alpm_pkg_get_name(p->data))) {
